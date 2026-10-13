@@ -9,7 +9,13 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
+import { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Miternal",
+  description: "Your personal Trade Jurnal dashboard",
+};
 
 export default function Home() {
   return (
