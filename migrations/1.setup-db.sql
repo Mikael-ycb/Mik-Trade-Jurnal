@@ -16,8 +16,6 @@ CREATE TABLE IF NOT EXISTS public.jurnal (
     notes TEXT,
     date DATE NOT NULL DEFAULT CURRENT_DATE,
 
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-    embedding VECTOR(768),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
