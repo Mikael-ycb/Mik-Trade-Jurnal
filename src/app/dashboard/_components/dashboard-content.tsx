@@ -1,8 +1,8 @@
 "use client";
 
-import { getBalanceSummary } from "@/features/action";
 import { useQuery } from "@tanstack/react-query";
 import { BalanceCards } from "./balance-card";
+import { getBalanceSummary } from "@/features/jurnal/action";
 // import WizardInput from "./wizard-input";
 // import GenerativeContent from "./generative-content";
 

@@ -30,7 +30,7 @@ const sidebarItems = [
     href: "/dashboard",
   },
   {
-    label: "Transactions",
+    label: "Jurnal",
     description: "Your trade history",
     icon: ArrowRightLeft,
     href: "/dashboard/transaction",

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Jurnal from "./_components/jurnal";
 
 export const metadata: Metadata = {
   title: "Miternal - Trading Jurnal",
@@ -14,6 +15,9 @@ export default function JurnalPage() {
           Track your trading performance, monitor profit and loss, and review
           your crypto trading journal.
         </p>
+      </section>
+      <section id="content">
+        <Jurnal />
       </section>
     </div>
   );
