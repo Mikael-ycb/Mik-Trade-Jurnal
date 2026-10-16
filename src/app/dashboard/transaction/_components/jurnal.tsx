@@ -17,7 +17,19 @@ export default function Jurnal() {
 
   return (
     <div className="space-y-6">
-      <JurnalTable jurnals={data} isLoading={isLoading} />
+      <JurnalTable
+        jurnals={data}
+        isLoading={isLoading}
+        refetch={() => {
+          void refetch();
+        }}
+        page={page}
+        limit={limit}
+        search={search}
+        setPage={setPage}
+        setLimit={setLimit}
+        setSearch={setSearch}
+      />
     </div>
   );
 }
