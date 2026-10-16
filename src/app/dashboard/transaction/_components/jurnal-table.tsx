@@ -32,7 +32,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { getJurnals } from "@/features/jurnal/action";
-import { SearchIcon } from "lucide-react";
+import { PencilIcon, SearchIcon, Trash2Icon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type JurnalResult = Awaited<ReturnType<typeof getJurnals>>;
 
@@ -46,6 +47,7 @@ const TABLE_HEADERS = [
   "Quantity",
   "P/L (USDT)",
   "Notes",
+  "action",
 ];
 
 export default function JurnalTable({
@@ -205,6 +207,40 @@ export default function JurnalTable({
 
                     <TableCell className="max-w-48 truncate text-slate-400">
                       {jurnal.notes || "—"}
+                    </TableCell>
+
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Edit jurnal"
+                          className="text-slate-400 hover:bg-yellow-400/10 hover:text-yellow-400"
+                          onClick={() =>
+                            setSelectedJurnal({
+                              data: jurnal,
+                              action: "update",
+                            })
+                          }
+                        >
+                          <PencilIcon className="size-4" />
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Hapus jurnal"
+                          className="text-slate-400 hover:bg-red-400/10 hover:text-red-400"
+                          onClick={() =>
+                            setSelectedJurnal({
+                              data: jurnal,
+                              action: "delete",
+                            })
+                          }
+                        >
+                          <Trash2Icon className="size-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
