@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { getJurnals } from "@/features/jurnal/action";
+
 import JurnalTable, { type SelectedJurnal } from "./jurnal-table";
 import CreateJurnalCard from "./create-transaction-card";
 import DeleteJurnalDialog from "./delete-jurnal-dialog";
 import UpdateJurnalDialog from "./update-jurnal-dialog";
+import DashboardContent from "../../_components/dashboard-content";
 
 export default function Jurnal() {
   const [page, setPage] = useState(1);
@@ -20,33 +22,52 @@ export default function Jurnal() {
     queryFn: () => getJurnals({ page, limit, search }),
   });
 
+  const refreshJurnals = () => {
+    void refetch();
+  };
+
   return (
-    <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-      <CreateJurnalCard refetch={() => void refetch()} />
+    <div className="flex min-w-0 flex-col gap-8">
+      {/* Dashboard Summary */}
+      <section className="min-w-0">
+        <DashboardContent />
+      </section>
 
-      <JurnalTable
-        jurnals={data}
-        isLoading={isLoading}
-        refetch={() => void refetch()}
-        page={page}
-        limit={limit}
-        search={search}
-        setPage={setPage}
-        setLimit={setLimit}
-        setSearch={setSearch}
-        setSelectedJurnal={setSelectedJurnal}
-      />
+      {/* Journal Management */}
+      <section className="grid min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
+        {/* Create Journal */}
+        <div className="min-w-0">
+          <CreateJurnalCard refetch={refreshJurnals} />
+        </div>
 
+        {/* Journal Table */}
+        <div className="min-w-0">
+          <JurnalTable
+            jurnals={data}
+            isLoading={isLoading}
+            refetch={refreshJurnals}
+            page={page}
+            limit={limit}
+            search={search}
+            setPage={setPage}
+            setLimit={setLimit}
+            setSearch={setSearch}
+            setSelectedJurnal={setSelectedJurnal}
+          />
+        </div>
+      </section>
+
+      {/* Update & Delete Dialogs */}
       <DeleteJurnalDialog
         selectedJurnal={selectedJurnal}
         setSelectedJurnal={setSelectedJurnal}
-        refetch={() => void refetch()}
+        refetch={refreshJurnals}
       />
 
       <UpdateJurnalDialog
         selectedJurnal={selectedJurnal}
         setSelectedJurnal={setSelectedJurnal}
-        refetch={() => void refetch()}
+        refetch={refreshJurnals}
       />
     </div>
   );

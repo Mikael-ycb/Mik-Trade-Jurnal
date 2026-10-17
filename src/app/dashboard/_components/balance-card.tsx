@@ -13,6 +13,7 @@ import {
   ChartNoAxesCombinedIcon,
   TargetIcon,
 } from "lucide-react";
+import WinRateChart from "./win-rate-chart";
 
 export function BalanceCards({
   data,
@@ -112,13 +113,13 @@ export function BalanceCards({
             </span>
             Win Rate
           </CardTitle>
-
-          <CardDescription className="text-2xl font-semibold tracking-tight text-white">
-            {winRate.toFixed(1)}%
-          </CardDescription>
         </CardHeader>
 
-        <CardFooter className="text-sm text-slate-400">
+        <div className="flex justify-center py-2">
+          <WinRateChart winRate={winRate} />
+        </div>
+
+        <CardFooter className="justify-center text-sm text-slate-400">
           <span className="text-emerald-400">{winningTrades} profit</span>
           <span className="mx-2 text-slate-600">·</span>
           <span className="text-rose-400">{losingTrades} loss</span>
