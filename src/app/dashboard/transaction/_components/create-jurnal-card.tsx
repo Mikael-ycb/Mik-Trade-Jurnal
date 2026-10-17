@@ -33,6 +33,8 @@ import {
 
 import { createJurnal } from "@/features/jurnal/action";
 import { DatePicker } from "@/components/ui/date-picker";
+import { useState } from "react";
+import { uploadJurnalImages } from "@/features/jurnal/upload-jurnal-images";
 
 const formSchema = z.object({
   symbol: z.string().trim().min(1, "Symbol wajib diisi"),
@@ -50,6 +52,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function CreateJurnalCard({ refetch }: { refetch: () => void }) {
+  const [analysisFiles, setAnalysisFiles] = useState<File[]>([]);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -65,8 +68,14 @@ export default function CreateJurnalCard({ refetch }: { refetch: () => void }) {
   });
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (data: FormValues) => {
-      return createJurnal({
+    mutationFn: async ({
+      data,
+      files,
+    }: {
+      data: FormValues;
+      files: File[];
+    }) => {
+      const jurnal = await createJurnal({
         symbol: data.symbol.trim().toUpperCase(),
         type: data.type,
         entry_price: Number(data.entry_price),
@@ -76,8 +85,19 @@ export default function CreateJurnalCard({ refetch }: { refetch: () => void }) {
         date: data.date,
         notes: data.notes.trim() || null,
       });
+
+      let imageError: string | null = null;
+
+      try {
+        await uploadJurnalImages(jurnal.id, files);
+      } catch (error) {
+        imageError =
+          error instanceof Error ? error.message : "Upload gambar gagal.";
+      }
+
+      return { jurnal, imageError };
     },
-    onSuccess: () => {
+    onSuccess: ({ imageError }) => {
       form.reset({
         symbol: "",
         type: "buy",
@@ -89,8 +109,16 @@ export default function CreateJurnalCard({ refetch }: { refetch: () => void }) {
         notes: "",
       });
 
+      setAnalysisFiles([]);
       refetch();
-      toast.success("Jurnal trading berhasil dibuat");
+
+      if (imageError) {
+        toast.warning(
+          `Jurnal tersimpan, tetapi gambar bermasalah: ${imageError}`,
+        );
+      } else {
+        toast.success("Jurnal trading berhasil dibuat");
+      }
     },
     onError: (error) => {
       toast.error(
@@ -100,7 +128,7 @@ export default function CreateJurnalCard({ refetch }: { refetch: () => void }) {
   });
 
   const onSubmit = (data: FormValues) => {
-    mutate(data);
+    mutate({ data, files: analysisFiles });
   };
 
   return (
@@ -297,6 +325,33 @@ export default function CreateJurnalCard({ refetch }: { refetch: () => void }) {
                 </Field>
               )}
             />
+
+            <Field className="gap-2">
+              <FieldLabel htmlFor="jurnal-analysis-image">
+                Analisa Teknikal (Opsional)
+              </FieldLabel>
+
+              <Input
+                id="jurnal-analysis-image"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={(event) =>
+                  setAnalysisFiles(Array.from(event.target.files ?? []))
+                }
+                className="border-white/10 bg-[#080b18]"
+              />
+
+              <p className="text-xs text-slate-500">
+                JPG, PNG, atau WebP. Maksimal 5 MB per gambar.
+              </p>
+
+              {analysisFiles.length > 0 && (
+                <p className="text-xs text-slate-300">
+                  {analysisFiles.length} gambar dipilih
+                </p>
+              )}
+            </Field>
 
             <Button
               type="submit"

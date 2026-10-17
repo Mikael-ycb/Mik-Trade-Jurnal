@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { z } from "zod";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -36,6 +37,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { updateJurnal } from "@/features/jurnal/action";
 import type { SelectedJurnal } from "./jurnal-table";
+import { uploadJurnalImages } from "@/features/jurnal/upload-jurnal-images";
 
 const formSchema = z.object({
   symbol: z.string().trim().min(1, "Symbol wajib diisi"),
@@ -63,6 +65,7 @@ export default function UpdateJurnalDialog({
   setSelectedJurnal,
   refetch,
 }: UpdateJurnalDialogProps) {
+  const [analysisFiles, setAnalysisFiles] = useState<File[]>([]);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -97,12 +100,18 @@ export default function UpdateJurnalDialog({
   }, [isOpen, selectedJurnal, form]);
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (data: FormValues) => {
+    mutationFn: async ({
+      data,
+      files,
+    }: {
+      data: FormValues;
+      files: File[];
+    }) => {
       if (!selectedJurnal) {
         throw new Error("Jurnal yang akan diperbarui tidak ditemukan");
       }
 
-      return updateJurnal(selectedJurnal.data.id, {
+      const jurnal = await updateJurnal(selectedJurnal.data.id, {
         symbol: data.symbol.trim().toUpperCase(),
         type: data.type,
         entry_price: Number(data.entry_price),
@@ -112,12 +121,31 @@ export default function UpdateJurnalDialog({
         date: data.date,
         notes: data.notes.trim() || null,
       });
+
+      let imageError: string | null = null;
+
+      try {
+        await uploadJurnalImages(jurnal.id, files);
+      } catch (error) {
+        imageError =
+          error instanceof Error ? error.message : "Upload gambar gagal.";
+      }
+
+      return { jurnal, imageError };
     },
 
-    onSuccess: () => {
+    onSuccess: ({ imageError }) => {
       setSelectedJurnal(null);
+      setAnalysisFiles([]);
       refetch();
-      toast.success("Jurnal trading berhasil diperbarui");
+
+      if (imageError) {
+        toast.warning(
+          `Jurnal diperbarui, tetapi gambar bermasalah: ${imageError}`,
+        );
+      } else {
+        toast.success("Jurnal trading berhasil diperbarui");
+      }
     },
 
     onError: (error) => {
@@ -130,7 +158,7 @@ export default function UpdateJurnalDialog({
   });
 
   const onSubmit = (data: FormValues) => {
-    mutate(data);
+    mutate({ data, files: analysisFiles });
   };
 
   return (
@@ -138,6 +166,7 @@ export default function UpdateJurnalDialog({
       open={isOpen}
       onOpenChange={(open) => {
         if (!open && !isPending) {
+          setAnalysisFiles([]);
           setSelectedJurnal(null);
         }
       }}
@@ -333,6 +362,33 @@ export default function UpdateJurnalDialog({
               )}
             />
           </FieldGroup>
+
+          <Field className="gap-2">
+            <FieldLabel htmlFor="update-analysis-image">
+              Tambah Analisa Teknikal (Opsional)
+            </FieldLabel>
+
+            <Input
+              id="update-analysis-image"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={(event) =>
+                setAnalysisFiles(Array.from(event.target.files ?? []))
+              }
+              className="border-white/10 bg-[#080b18]"
+            />
+
+            <p className="text-xs text-slate-500">
+              Gambar baru akan ditambahkan. Gambar lama tidak dihapus.
+            </p>
+
+            {analysisFiles.length > 0 && (
+              <p className="text-xs text-slate-300">
+                {analysisFiles.length} gambar dipilih
+              </p>
+            )}
+          </Field>
 
           <DialogFooter className="mt-5">
             <Button
