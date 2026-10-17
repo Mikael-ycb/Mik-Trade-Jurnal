@@ -7,6 +7,7 @@ import { getJurnals } from "@/features/jurnal/action";
 import JurnalTable, { type SelectedJurnal } from "./jurnal-table";
 import CreateJurnalCard from "./create-transaction-card";
 import DeleteJurnalDialog from "./delete-jurnal-dialog";
+import UpdateJurnalDialog from "./update-jurnal-dialog";
 
 export default function Jurnal() {
   const [page, setPage] = useState(1);
@@ -37,6 +38,12 @@ export default function Jurnal() {
       />
 
       <DeleteJurnalDialog
+        selectedJurnal={selectedJurnal}
+        setSelectedJurnal={setSelectedJurnal}
+        refetch={() => void refetch()}
+      />
+
+      <UpdateJurnalDialog
         selectedJurnal={selectedJurnal}
         setSelectedJurnal={setSelectedJurnal}
         refetch={() => void refetch()}
