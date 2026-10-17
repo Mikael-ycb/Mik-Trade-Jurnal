@@ -2,6 +2,7 @@
 
 import {
   Card,
+  CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
@@ -14,6 +15,7 @@ import {
   TargetIcon,
 } from "lucide-react";
 import WinRateChart from "./win-rate-chart";
+import ProfitLossChart from "./profit-loss-chart";
 
 export function BalanceCards({
   data,
@@ -25,6 +27,10 @@ export function BalanceCards({
         totalTrades: number;
         winningTrades: number;
         losingTrades: number;
+        profitHistory: {
+          date: string;
+          profit: number;
+        }[];
       }
     | undefined;
   error: unknown;
@@ -46,6 +52,8 @@ export function BalanceCards({
 
   const isProfit = totalProfit >= 0;
 
+  const profitHistory = data?.profitHistory ?? [];
+
   const cardStyle =
     "rounded-2xl border border-white/[0.08] bg-[#0c1020] text-white shadow-none transition-colors duration-200 hover:border-purple-500/30";
 
@@ -53,7 +61,7 @@ export function BalanceCards({
     <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
       {/* Total Profit / Loss */}
       <Card className={cardStyle}>
-        <CardHeader className="gap-4">
+        <CardHeader className="gap-3">
           <CardTitle className="flex items-center gap-3 text-sm font-medium text-slate-300">
             <span className="flex size-9 items-center justify-center rounded-lg border border-emerald-400/15 bg-emerald-400/[0.08]">
               {isProfit ? (
@@ -77,11 +85,13 @@ export function BalanceCards({
             })}{" "}
             USDT
           </CardDescription>
+
+          <p className="text-sm text-slate-400">Akumulasi hasil trading</p>
         </CardHeader>
 
-        <CardFooter className="text-sm text-slate-400">
-          Akumulasi hasil trading
-        </CardFooter>
+        <CardContent className="pt-0">
+          <ProfitLossChart data={profitHistory} isProfit={isProfit} />
+        </CardContent>
       </Card>
 
       {/* Total Trades */}

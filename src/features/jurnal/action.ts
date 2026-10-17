@@ -22,7 +22,7 @@ export type JurnalInput = Omit<Jurnal, "id" | "user_id" | "created_at">;
 export async function getBalanceSummary() {
   const supabase = await createClient();
 
-  const { data, error } = await supabase.from("jurnal").select("result");
+  const { data, error } = await supabase.from("jurnal").select("result, date");
 
   if (error) throw new Error(error.message);
 
@@ -41,11 +41,39 @@ export async function getBalanceSummary() {
     (jurnal) => (jurnal.result ?? 0) < 0,
   ).length;
 
+  // Kelompokkan hasil trading berdasarkan tanggal.
+  const dailyResults = new Map<string, number>();
+
+  for (const jurnal of results) {
+    if (jurnal.result === null) continue;
+
+    dailyResults.set(
+      jurnal.date,
+      (dailyResults.get(jurnal.date) ?? 0) + jurnal.result,
+    );
+  }
+
+  // Urutkan tanggal dari yang paling lama ke terbaru,
+  // kemudian hitung akumulasi profit/loss.
+  let cumulativeProfit = 0;
+
+  const profitHistory = Array.from(dailyResults.entries())
+    .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+    .map(([date, dailyProfit]) => {
+      cumulativeProfit += dailyProfit;
+
+      return {
+        date,
+        profit: cumulativeProfit,
+      };
+    });
+
   return {
     totalProfit,
     totalTrades: results.length,
     winningTrades,
     losingTrades,
+    profitHistory,
   };
 }
 
