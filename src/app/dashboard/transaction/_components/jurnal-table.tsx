@@ -35,6 +35,7 @@ import type { getJurnals } from "@/features/jurnal/action";
 import { PencilIcon, SearchIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Dispatch, SetStateAction } from "react";
+import JurnalImageGallery from "./jurnal-image-gallery";
 
 type JurnalResult = Awaited<ReturnType<typeof getJurnals>>;
 
@@ -50,12 +51,14 @@ const TABLE_HEADERS = [
   "Date",
   "Symbol",
   "Type",
+  "Analisa Teknikal",
   "Entry Price",
   "Exit Price",
   "Quantity",
+  "Result Image",
   "P/L (USDT)",
   "Notes",
-  "action",
+  "Action",
 ];
 
 export default function JurnalTable({
@@ -177,6 +180,11 @@ export default function JurnalTable({
                       </span>
                     </TableCell>
 
+                    {/* Screenshot analisis sebelum entry */}
+                    <TableCell>
+                      <JurnalImageGallery jurnalId={jurnal.id} stage="before" />
+                    </TableCell>
+
                     <TableCell className="whitespace-nowrap text-slate-300">
                       {jurnal.entry_price.toLocaleString("en-US")}
                     </TableCell>
@@ -191,6 +199,11 @@ export default function JurnalTable({
                       {jurnal.quantity.toLocaleString("en-US", {
                         maximumFractionDigits: 8,
                       })}
+                    </TableCell>
+
+                    {/* Screenshot hasil setelah trading */}
+                    <TableCell>
+                      <JurnalImageGallery jurnalId={jurnal.id} stage="after" />
                     </TableCell>
 
                     <TableCell

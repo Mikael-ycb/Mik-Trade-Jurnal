@@ -1,14 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  ImagePlus,
-  Images,
-  LoaderCircle,
-  Trash2,
-  Upload,
-  X,
-} from "lucide-react";
+import { ImagePlus, Images, LoaderCircle, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -27,7 +20,7 @@ type Stage = "before" | "after";
 type JournalImage = {
   id: string;
   jurnal_id: string;
-  user_id: string;
+  user_id: string | null;
   stage: Stage;
   storage_path: string;
   original_name: string;
@@ -37,7 +30,7 @@ type JournalImage = {
 };
 
 type GalleryImage = JournalImage & {
-  signedUrl: string;
+  publicUrl: string;
 };
 
 type Props = {
@@ -57,7 +50,6 @@ export default function JurnalImageGallery({ jurnalId, stage }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const title = stage === "before" ? "Analisa Teknikal" : "Result Trading";
 
@@ -76,48 +68,25 @@ export default function JurnalImageGallery({ jurnalId, stage }: Props) {
 
       const rows = (data ?? []) as JournalImage[];
 
-      const signedImages = await Promise.all(
-        rows.map(async (image) => {
-          const { data: signed, error: signedError } = await supabase.storage
-            .from(BUCKET)
-            .createSignedUrl(image.storage_path, 300);
+      const publicImages = rows.map((image) => {
+        const { data: publicData } = supabase.storage
+          .from(BUCKET)
+          .getPublicUrl(image.storage_path);
 
-          if (signedError || !signed?.signedUrl) {
-            return null;
-          }
+        return {
+          ...image,
+          publicUrl: publicData.publicUrl,
+        };
+      });
 
-          return { ...image, signedUrl: signed.signedUrl };
-        }),
-      );
-
-      const validImages = signedImages.filter(
-        (image): image is GalleryImage => image !== null,
-      );
-
-      setImages(validImages);
+      setImages(publicImages);
       setCount(rows.length);
     } catch (error) {
-      console.error("Gagal memuat gambar jurnal:", error);
+      console.error("Gagal memuat gambar:", error);
       toast.error("Gagal memuat gambar jurnal.");
     } finally {
       setLoading(false);
     }
-  }, [supabase, jurnalId, stage]);
-
-  // Muat jumlah gambar tanpa mengunduh file gambar.
-  const loadCount = useCallback(async () => {
-    const { count: total, error } = await supabase
-      .from("jurnal_images")
-      .select("id", { count: "exact", head: true })
-      .eq("jurnal_id", jurnalId)
-      .eq("stage", stage);
-
-    if (error) {
-      console.error("Gagal memuat jumlah gambar:", error);
-      return;
-    }
-
-    setCount(total ?? 0);
   }, [supabase, jurnalId, stage]);
 
   useEffect(() => {
@@ -168,27 +137,24 @@ export default function JurnalImageGallery({ jurnalId, stage }: Props) {
 
         const rows = (data ?? []) as JournalImage[];
 
-        const signedImages = await Promise.all(
-          rows.map(async (image) => {
-            const { data: signed, error: signedError } = await supabase.storage
-              .from(BUCKET)
-              .createSignedUrl(image.storage_path, 300);
+        const result = rows.map((image) => {
+          const { data: publicData } = supabase.storage
+            .from(BUCKET)
+            .getPublicUrl(image.storage_path);
 
-            if (signedError || !signed?.signedUrl) return null;
+          return {
+            ...image,
+            publicUrl: publicData.publicUrl,
+          };
+        });
 
-            return { ...image, signedUrl: signed.signedUrl };
-          }),
-        );
-
-        if (cancelled) return;
-
-        setImages(
-          signedImages.filter((image): image is GalleryImage => image !== null),
-        );
-        setCount(rows.length);
+        if (!cancelled) {
+          setImages(result);
+          setCount(rows.length);
+        }
       } catch (error) {
         if (!cancelled) {
-          console.error("Gagal memuat gambar jurnal:", error);
+          console.error("Gagal memuat gambar:", error);
           toast.error("Gagal memuat gambar jurnal.");
         }
       } finally {
@@ -208,15 +174,18 @@ export default function JurnalImageGallery({ jurnalId, stage }: Props) {
     const files = Array.from(input.files ?? []);
     input.value = "";
 
-    if (!files.length) return;
+    if (files.length === 0) return;
 
     const invalidFile = files.find(
-      (file) => !ALLOWED_TYPES.includes(file.type) || file.size > MAX_SIZE,
+      (file) =>
+        !ALLOWED_TYPES.includes(file.type) ||
+        file.size > MAX_SIZE ||
+        file.size === 0,
     );
 
     if (invalidFile) {
       toast.error(
-        `${invalidFile.name}: gunakan JPG, PNG, atau WebP maksimal 5 MB per gambar.`,
+        `${invalidFile.name}: gunakan JPG, PNG, atau WebP maksimal 5 MB.`,
       );
       return;
     }
@@ -225,34 +194,26 @@ export default function JurnalImageGallery({ jurnalId, stage }: Props) {
     const uploadedPaths: string[] = [];
 
     try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        throw new Error("Silakan login kembali.");
-      }
-
       for (const file of files) {
-        const extension = file.name.split(".").pop()?.toLowerCase();
-        const path = `${user.id}/${jurnalId}/${crypto.randomUUID()}.${extension}`;
+        const extension = file.type.split("/")[1].replace("jpeg", "jpg");
+        const path = `${jurnalId}/${crypto.randomUUID()}.${extension}`;
 
-        const { error } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from(BUCKET)
           .upload(path, file, {
             contentType: file.type,
             upsert: false,
           });
 
-        if (error) throw error;
+        if (uploadError) throw uploadError;
+
         uploadedPaths.push(path);
 
         const { error: insertError } = await supabase
           .from("jurnal_images")
           .insert({
             jurnal_id: jurnalId,
-            user_id: user.id,
+            user_id: null,
             stage,
             storage_path: path,
             original_name: file.name,
@@ -268,68 +229,15 @@ export default function JurnalImageGallery({ jurnalId, stage }: Props) {
     } catch (error) {
       console.error("Gagal mengunggah gambar:", error);
 
-      // Bersihkan file yang sudah diunggah jika proses gagal.
-      if (uploadedPaths.length) {
-        const { error: cleanupError } = await supabase.storage
-          .from(BUCKET)
-          .remove(uploadedPaths);
-
-        if (cleanupError) {
-          console.error("Gagal membersihkan file:", cleanupError);
-        }
-
-        // Metadata yang sempat berhasil dibuat juga perlu dibersihkan.
-        await supabase
-          .from("jurnal_images")
-          .delete()
-          .in("storage_path", uploadedPaths);
-      }
-
       toast.error(
         error instanceof Error ? error.message : "Gagal mengunggah gambar.",
       );
-      await loadImages();
+
+      // Jangan menghapus file otomatis di sini:
+      // upload mungkin berhasil sementara insert metadata gagal.
+      // File tersebut dapat dibersihkan dari dashboard Supabase.
     } finally {
       setUploading(false);
-      await loadCount();
-    }
-  };
-
-  const handleDelete = async (image: GalleryImage) => {
-    const confirmed = window.confirm(`Hapus gambar "${image.original_name}"?`);
-
-    if (!confirmed) return;
-
-    setDeletingId(image.id);
-
-    try {
-      const { error: storageError } = await supabase.storage
-        .from(BUCKET)
-        .remove([image.storage_path]);
-
-      if (storageError) throw storageError;
-
-      const { error: dbError } = await supabase
-        .from("jurnal_images")
-        .delete()
-        .eq("id", image.id);
-
-      if (dbError) {
-        // File sudah terhapus. Jangan menyembunyikan kegagalan metadata.
-        throw dbError;
-      }
-
-      toast.success("Gambar berhasil dihapus.");
-      await loadImages();
-      await loadCount();
-    } catch (error) {
-      console.error("Gagal menghapus gambar:", error);
-      toast.error(
-        "Gagal menghapus gambar. Periksa koneksi dan kebijakan akses.",
-      );
-      await loadImages();
-    } finally {
-      setDeletingId(null);
     }
   };
 
@@ -354,8 +262,8 @@ export default function JurnalImageGallery({ jurnalId, stage }: Props) {
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="text-slate-400">
-            {count} gambar tersimpan. Format JPG, PNG, atau WebP, maksimal 5 MB
-            per gambar.
+            {count} gambar tersimpan. JPG, PNG, atau WebP, maksimal 5 MB per
+            gambar.
           </DialogDescription>
         </DialogHeader>
 
@@ -366,7 +274,9 @@ export default function JurnalImageGallery({ jurnalId, stage }: Props) {
             ) : (
               <Upload className="size-4" />
             )}
+
             {uploading ? "Mengunggah..." : "Upload gambar"}
+
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
@@ -401,39 +311,23 @@ export default function JurnalImageGallery({ jurnalId, stage }: Props) {
                 className="overflow-hidden rounded-xl border border-white/10 bg-[#080b16]"
               >
                 <a
-                  href={image.signedUrl}
+                  href={image.publicUrl}
                   target="_blank"
                   rel="noreferrer"
                   title="Buka gambar penuh"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={image.signedUrl}
+                    src={image.publicUrl}
                     alt={image.original_name}
                     className="h-44 w-full object-contain"
                   />
                 </a>
 
-                <div className="flex items-center justify-between gap-2 p-3">
-                  <span className="min-w-0 truncate text-xs text-slate-300">
+                <div className="p-3">
+                  <span className="block truncate text-xs text-slate-300">
                     {image.original_name}
                   </span>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={`Hapus ${image.original_name}`}
-                    disabled={deletingId === image.id}
-                    onClick={() => void handleDelete(image)}
-                    className="shrink-0 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300"
-                  >
-                    {deletingId === image.id ? (
-                      <LoaderCircle className="size-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="size-4" />
-                    )}
-                  </Button>
                 </div>
               </div>
             ))}

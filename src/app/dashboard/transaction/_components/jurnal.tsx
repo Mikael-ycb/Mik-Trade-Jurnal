@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getJurnals } from "@/features/jurnal/action";
 
 import JurnalTable, { type SelectedJurnal } from "./jurnal-table";
-import CreateJurnalCard from "./create-transaction-card";
+import CreateJurnalCard from "./create-jurnal-card";
 import DeleteJurnalDialog from "./delete-jurnal-dialog";
 import UpdateJurnalDialog from "./update-jurnal-dialog";
 import DashboardContent from "../../_components/dashboard-content";
