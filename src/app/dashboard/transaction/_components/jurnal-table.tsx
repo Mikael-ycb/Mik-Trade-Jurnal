@@ -34,8 +34,16 @@ import {
 import type { getJurnals } from "@/features/jurnal/action";
 import { PencilIcon, SearchIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { Dispatch, SetStateAction } from "react";
 
 type JurnalResult = Awaited<ReturnType<typeof getJurnals>>;
+
+type JurnalRow = NonNullable<JurnalResult>["data"][number];
+
+export type SelectedJurnal = {
+  data: JurnalRow;
+  action: "update" | "delete";
+} | null;
 
 const TABLE_HEADERS = [
   "#",
@@ -60,6 +68,7 @@ export default function JurnalTable({
   setLimit,
   setSearch,
   refetch,
+  setSelectedJurnal,
 }: {
   jurnals?: JurnalResult;
   isLoading: boolean;
@@ -70,6 +79,7 @@ export default function JurnalTable({
   setLimit: (limit: number) => void;
   setSearch: (search: string) => void;
   refetch: () => void;
+  setSelectedJurnal: Dispatch<SetStateAction<SelectedJurnal>>;
 }) {
   const [localSearch, setLocalSearch] = useState(search);
 

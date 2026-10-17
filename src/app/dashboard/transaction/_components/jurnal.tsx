@@ -2,14 +2,17 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+
 import { getJurnals } from "@/features/jurnal/action";
-import JurnalTable from "./jurnal-table";
+import JurnalTable, { type SelectedJurnal } from "./jurnal-table";
 import CreateJurnalCard from "./create-transaction-card";
+import DeleteJurnalDialog from "./delete-jurnal-dialog";
 
 export default function Jurnal() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
+  const [selectedJurnal, setSelectedJurnal] = useState<SelectedJurnal>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["jurnals", page, limit, search],
@@ -30,6 +33,13 @@ export default function Jurnal() {
         setPage={setPage}
         setLimit={setLimit}
         setSearch={setSearch}
+        setSelectedJurnal={setSelectedJurnal}
+      />
+
+      <DeleteJurnalDialog
+        selectedJurnal={selectedJurnal}
+        setSelectedJurnal={setSelectedJurnal}
+        refetch={() => void refetch()}
       />
     </div>
   );
