@@ -242,7 +242,9 @@ export default function CreateJurnalCard({ refetch }: { refetch: () => void }) {
               name="quantity"
               render={({ field, fieldState }) => (
                 <Field className="gap-1">
-                  <FieldLabel htmlFor="jurnal-quantity">Quantity</FieldLabel>
+                  <FieldLabel htmlFor="jurnal-quantity">
+                    Quantity(USDT)
+                  </FieldLabel>
                   <Input
                     {...field}
                     id="jurnal-quantity"
