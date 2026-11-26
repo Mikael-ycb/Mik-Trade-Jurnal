@@ -2,6 +2,7 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import type { ReactNode } from "react";
 import { Metadata } from "next";
+import ChatbotDrawer from "./_components/chatbot-drawer";
 
 export const metadata: Metadata = {
   title: "Miternal Dashboard",
@@ -30,6 +31,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
         <main className="relative z-10 min-w-0 flex-1 p-4 md:p-6 lg:p-8">
           {children}
+          <ChatbotDrawer />
         </main>
       </div>
     </SidebarProvider>
