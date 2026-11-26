@@ -18,7 +18,7 @@ export async function handleChat(
 ) {
   const ai = createAI();
   const response = await ai.models.generateContent({
-    model: "gemini-3.7-flash",
+    model: "gemini-3.5-flash",
     contents: [...conversation],
     config: {
       thinkingConfig: {
@@ -57,7 +57,7 @@ export async function handleChat(
 async function generalChat(conversation: Content[], isThinking?: boolean) {
   const ai = createAI();
   const response = await ai.models.generateContentStream({
-    model: "gemini-2.5-flash",
+    model: "gemini-3.5-flash",
     contents: [...conversation],
     config: {
       thinkingConfig: {
@@ -233,7 +233,7 @@ export async function* handleChatStreaming(
 
     while (running) {
       const response = await ai.models.generateContentStream({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.5-flash",
         contents,
         config: {
           tools: [

@@ -3,29 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import Markdown from "react-markdown";
-import { BotIcon, ChevronDownIcon, EllipsisIcon, XIcon } from "lucide-react";
+import { BotIcon, EllipsisIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 import { handleChatStreaming } from "@/features/ai/chat";
 import { cn } from "@/lib/utils";
-import { Conversation } from "@/app/types/ai";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import ChatbotTextarea from "./chatbotTextarea";
+import type { Conversation } from "@/app/types/ai";
 
 type ChatMode = "general" | "personal";
 
@@ -51,6 +44,9 @@ export default function ChatbotDrawer() {
       const response = await handleChatStreaming(messages, thinking, chatMode);
 
       for await (const chunk of response) {
+        // Abaikan chunk penalaran internal; tampilkan jawaban akhir saja.
+        if (chunk.startsWith("[thounght]")) continue;
+
         setConversation((prev) => {
           const updated = [...prev];
           const lastIndex = updated.length - 1;
@@ -61,30 +57,17 @@ export default function ChatbotDrawer() {
           }
 
           const parts = [...lastMessage.parts];
+          const answerIndex = parts.findIndex((part) => !part.thounght);
+          const targetIndex = answerIndex === -1 ? parts.length : answerIndex;
 
-          if (thinking) {
-            const isThoughtChunk = chunk.startsWith("[thounght]");
-            const chunkText = isThoughtChunk
-              ? chunk.replace("[thounght]", "")
-              : chunk;
-
-            const targetIndex = isThoughtChunk ? 0 : 1;
-
-            while (parts.length <= targetIndex) {
-              parts.push({ text: "" });
-            }
-
-            parts[targetIndex] = {
-              ...parts[targetIndex],
-              ...(isThoughtChunk ? { thought: true } : {}),
-              text: `${parts[targetIndex].text ?? ""}${chunkText}`,
-            };
-          } else {
-            parts[0] = {
-              ...parts[0],
-              text: `${parts[0]?.text ?? ""}${chunk}`,
-            };
+          if (!parts[targetIndex]) {
+            parts[targetIndex] = { text: "" };
           }
+
+          parts[targetIndex] = {
+            ...parts[targetIndex],
+            text: `${parts[targetIndex].text ?? ""}${chunk}`,
+          };
 
           updated[lastIndex] = {
             ...lastMessage,
@@ -136,15 +119,12 @@ export default function ChatbotDrawer() {
 
     const modelPlaceholder: Conversation = {
       role: "model",
-      parts: isThinking
-        ? [{ thounght: true, text: "" }, { text: "" }]
-        : [{ text: "" }],
+      parts: [{ text: "" }],
     };
 
-    // Kirim riwayat yang sudah menyertakan pesan terbaru.
+    // Sertakan pesan terbaru agar AI tidak menerima riwayat yang tertinggal.
     const messages = [...conversation, userMessage];
 
-    // Placeholder menampung respons streaming.
     setConversation([...messages, modelPlaceholder]);
 
     handleChatMutation({
@@ -162,39 +142,44 @@ export default function ChatbotDrawer() {
   }, [conversation]);
 
   return (
-    <Drawer>
-      <DrawerTrigger className="fixed bottom-4 right-4 z-50">
+    <Sheet>
+      <SheetTrigger>
         <Button
-          className="size-14 rounded-full shadow-lg"
+          className="fixed bottom-4 right-4 z-50 size-14 rounded-full bg-fuchsia-600 text-white shadow-lg shadow-fuchsia-950/30 hover:bg-fuchsia-500"
           size="icon-lg"
           aria-label="Buka Miternal AI"
         >
           <BotIcon className="size-6" />
         </Button>
-      </DrawerTrigger>
+      </SheetTrigger>
 
-      <DrawerContent className="w-screen! md:w-110!">
-        <DrawerHeader>
-          <div>
-            <DrawerTitle className="font-bold text-primary">
+      <SheetContent
+        side="right"
+        className="flex h-dvh w-full flex-col gap-0 overflow-hidden border-l border-white/10 bg-[#0b0b12] p-0 text-slate-100 shadow-2xl shadow-black/40 sm:max-w-md"
+      >
+        <SheetHeader className="border-b border-white/10 bg-[#0b0b12] px-5 py-5 text-left">
+          <div className="flex items-center gap-2">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-fuchsia-500/10 text-fuchsia-300">
+              <BotIcon className="size-5" />
+            </div>
+
+            <SheetTitle className="text-lg font-semibold text-fuchsia-300">
               Miternal AI
-            </DrawerTitle>
-            <DrawerDescription>
-              Asisten untuk jurnal trading, evaluasi performa, dan manajemen
-              risiko crypto.
-            </DrawerDescription>
+            </SheetTitle>
           </div>
 
-          <DrawerClose>
-            <Button variant="outline" size="icon" aria-label="Tutup chatbot">
-              <XIcon />
-            </Button>
-          </DrawerClose>
-        </DrawerHeader>
+          <SheetDescription className="text-sm leading-relaxed text-slate-400">
+            Asisten untuk jurnal trading, evaluasi performa, dan manajemen
+            risiko crypto.
+          </SheetDescription>
+        </SheetHeader>
 
-        <div ref={chatRef} className="no-scrollbar h-full overflow-y-auto px-4">
+        <div
+          ref={chatRef}
+          className="no-scrollbar min-h-0 flex-1 overflow-y-auto bg-[#0b0b12] px-5 py-5"
+        >
           {conversation.length > 0 ? (
-            <div className="flex h-full flex-col gap-8 overflow-x-hidden pb-4">
+            <div className="flex flex-col gap-6">
               {conversation.map((message, index) => (
                 <div
                   key={`conversation-${index}`}
@@ -204,72 +189,73 @@ export default function ChatbotDrawer() {
                   )}
                 >
                   <div
-                    className={cn("flex w-full flex-col", {
-                      "w-fit max-w-3/4 rounded-3xl rounded-br-md bg-primary/20 px-5 py-2 text-primary":
+                    className={cn("flex min-w-0 flex-col", {
+                      "w-fit max-w-[85%] rounded-2xl rounded-br-md border border-fuchsia-400/10 bg-fuchsia-500/10 px-4 py-3 text-slate-100":
                         message.role === "user",
+                      "w-full": message.role === "model",
                     })}
                   >
                     {message.role === "model" && (
-                      <div className="flex items-center gap-1 text-sm font-semibold text-primary">
+                      <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-fuchsia-300">
                         <BotIcon className="size-4" />
                         <span>Miternal AI</span>
                       </div>
                     )}
 
                     {message.role === "model" ? (
-                      <div className="response-ai min-w-0">
-                        {message.parts.map((part, partIndex) => (
-                          <div key={`response-${index}-${partIndex}`}>
-                            {part.thounght ? (
-                              <Collapsible>
-                                <CollapsibleTrigger>
-                                  <Button variant="ghost" size="sm">
-                                    Tampilkan ringkasan analisis
-                                    <ChevronDownIcon className="ml-1 size-4" />
-                                  </Button>
-                                </CollapsibleTrigger>
-
-                                <CollapsibleContent>
-                                  <div className="ml-4 border-l pl-2 text-sm text-muted-foreground">
-                                    <Markdown>{part.text ?? ""}</Markdown>
-                                  </div>
-                                </CollapsibleContent>
-                              </Collapsible>
-                            ) : (
+                      <div className="response-ai min-w-0 break-words text-sm leading-7 text-slate-200">
+                        {message.parts
+                          .filter((part) => !part.thounght)
+                          .map((part, partIndex) => (
+                            <div key={`response-${index}-${partIndex}`}>
                               <Markdown>{part.text ?? ""}</Markdown>
-                            )}
-                          </div>
-                        ))}
+                            </div>
+                          ))}
                       </div>
                     ) : (
-                      message.parts[0]?.text
+                      <p className="whitespace-pre-wrap break-words text-sm leading-6">
+                        {message.parts[0]?.text}
+                      </p>
                     )}
                   </div>
                 </div>
               ))}
 
               {isPending && (
-                <div className="flex -mt-2 items-center animate-pulse">
-                  <EllipsisIcon className="size-8 text-primary/50" />
-                  <span className="text-sm text-muted-foreground">
-                    Miternal AI sedang menyiapkan jawaban...
-                  </span>
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <EllipsisIcon className="size-6 animate-pulse text-fuchsia-300/70" />
+                  <span>Miternal AI sedang menyiapkan jawaban...</span>
                 </div>
               )}
             </div>
           ) : (
-            <div className="flex h-full flex-col items-center justify-center text-center">
-              <BotIcon className="mb-3 size-10 text-primary" />
-              <h2 className="text-3xl font-bold text-primary">Halo, Trader!</h2>
-              <p className="mt-2 max-w-xs text-sm text-muted-foreground">
-                Tanyakan tentang trading crypto, atau minta bantuan untuk
-                mengevaluasi jurnal trading kamu.
+            <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+              <div className="mb-5 flex size-16 items-center justify-center rounded-2xl border border-fuchsia-400/20 bg-fuchsia-500/10 text-fuchsia-300 shadow-lg shadow-fuchsia-950/20">
+                <BotIcon className="size-8" />
+              </div>
+
+              <h2 className="text-2xl font-semibold tracking-tight text-white">
+                Halo, Trader!
+              </h2>
+
+              <p className="mt-3 max-w-xs text-sm leading-6 text-slate-400">
+                Tanya tentang trading crypto atau evaluasi jurnal trading kamu
+                bersama Miternal AI.
               </p>
+
+              <div className="mt-6 flex flex-wrap justify-center gap-2">
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300">
+                  Evaluasi trading
+                </span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300">
+                  Manajemen risiko
+                </span>
+              </div>
             </div>
           )}
         </div>
 
-        <DrawerFooter>
+        <div className="border-t border-white/10 bg-[#0b0b12] p-4">
           <ChatbotTextarea
             isThinking={isThinking}
             setIsThinking={setIsThinking}
@@ -277,8 +263,8 @@ export default function ChatbotDrawer() {
             mode={mode}
             setMode={setMode}
           />
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

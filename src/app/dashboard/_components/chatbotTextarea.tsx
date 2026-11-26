@@ -68,7 +68,7 @@ export default function ChatbotTextarea({
   return (
     <form
       onSubmit={form.handleSubmit(onSubmit)}
-      className="flex flex-col gap-2 rounded-2xl bg-secondary p-2"
+      className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#13131d] p-3"
     >
       <Controller
         control={form.control}
@@ -141,7 +141,7 @@ export default function ChatbotTextarea({
           variant="ghost"
           disabled={!message?.trim()}
           aria-label="Kirim pesan"
-          className="cursor-pointer text-primary hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:bg-transparent"
+          className="rounded-xl bg-fuchsia-500/10 text-fuchsia-300 hover:bg-fuchsia-500/20 hover:text-fuchsia-200"
         >
           <SendIcon className="size-5" />
         </Button>
